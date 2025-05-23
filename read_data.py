@@ -7,25 +7,40 @@ pd.set_option('display.max_colwidth', None) #don't truncate text in cells
 file_path = r"C:\Projects\Python\Veridion Challenge 4\veridion_product_deduplication_challenge.snappy.parquet"
 df = pd.read_parquet(file_path)
 
-print("All columns:\n", df.columns.tolist()) #print all column names
-
 cols = ['product_title', 'brand', 'product_name', 'product_identifier']
-sample = df[cols].head(50)
+full = df[cols] #grab every row
+full.to_csv('dedupe_full.csv', index = False)
+print(f"Wrote dedupe_full.csv ({full.shape[0]} rows)")
 
-#writing CSV in project folder
-sample.to_csv('dedupe_sample.csv', index=False)
-print("Wrote dedupe_sample.csv. Opening it in VS Code for a clean view.")
+#1 exploratory check
+counts = full['product_title'].value_counts()
+print("\nDuplicates in full:")
+print(counts[counts > 1])
 
-counts = sample['product_title'].value_counts() #count how often each title appears in the sample
-dupes = counts[counts > 1] #keep only the titles that appear more than once
+#2 define helper first_non_null (function)
+def first_non_null(s):
+    nonnull = s.dropna()
+    return nonnull.iloc[0] if len(nonnull) else None
 
-print("\nDuplicate titles in sample (product_title -> count):")
-print(dupes)
+#3 always merge, regardless of counts
+merged = (
+    full
+    .groupby('product_title', as_index = False, sort = False)
+    .agg({
+            'brand': first_non_null,
+            'product_name': first_non_null,
+            'product_identifier': first_non_null
+    })
+)
 
-#If there is at least one deduplicate, show its full rows
-if not dupes.empty:
-    first_dup = dupes.index[0]
-    print(f"\nRows for duplicate title: \"{first_dup}\"")
-    print(sample[sample['product_title'] == first_dup])
+#Fill any remaining blanks with 'Unknown'
+merged.fillna('Unknown', inplace = True)
+
+#4 export merged view
+merged.to_csv('dedupe_merged_full.csv', index = False)
+print(f"Wrote dedupe_merged_full.csv ({merged.shape[0]} unique titles)")
+
+print("\nMerged full preview:")
+print(merged)
 
 input("\nPress Enter to exit...")
