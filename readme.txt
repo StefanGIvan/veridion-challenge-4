@@ -67,7 +67,7 @@ print("Wrote dedupe_sample.csv. Opening it in VS Code for a clean view.")
 
 I updated the code so I see in the dedupe_merged_sample.csv, showing every column for a duplicated product.
 Defined 'first_non_null(s)' -> drops nulls and returns the first reamaining value
-Used first_non_null aggregation for every category to pick the first non-missing value in each row:
+Used first_non_null aggregation for every field to pick the first non-missing value in each row:
 
 merged = (
     sample
@@ -86,6 +86,25 @@ Step 4. Recreated CSV files to analyze them with the updated code.
 Next is applying identical code to the full dataset(df[cols] instead of sample). I replaced sample with full.
 Even though I used 'first_non_null', there were still cell blanks. I used a placeholder like 'Unknown' to make no cell blank.
 Also added groupby(..., sort = False) to keep the rows in original order
+Reviewed pandas documentation for functions
+
+Step 5. Reviewing dedupe_full.csv(raw) and dedupe_merged_full.csv:
+"dedupe_full.csv"         "dedupe_merged_full.csv"
+rows: 22035               rows: 19026
+brand: blank              brand: Unknown
+
+Rows removed due to duplicates of 'product_title': 3009
+
+
+Step 6. Generelizing to the entire parquet file, taking the full DataFrame
+Coding aggregate to be dinamically and changing merged
+Again, filling every missing cell with 'Unknown'
+
+Result:
+"full_raw.csv"          "full_dedupe.csv"
+rows: 21946             rows: 18955
+Removed rows: 2991
+
 
 
 
