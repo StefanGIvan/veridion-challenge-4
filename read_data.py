@@ -1,4 +1,5 @@
 import pandas as pd
+from rapidfuzz import process, fuzz
 
 # Configure pandas display
 pd.set_option('display.max_columns', None) #don't hide any selected columns
@@ -14,7 +15,7 @@ full = df.copy()
 
 # Export the raw full dataset
 full.to_csv('full_raw.csv', index = False)
-print(f"Wrote full_raw.csv ({full.shape[0]} rows) and full.shape[1] columns")
+print(f"Wrote full_raw.csv ({full.shape[0]} rows, {full.shape[1]} columns)")
 
 # Define helper first_non_null(function) to pick the first non-null value in each group
 def first_non_null(s : pd.Series):
@@ -40,12 +41,43 @@ merged.fillna('Unknown', inplace = True)
 
 # Export merged view
 merged.to_csv('full_dedupe.csv', index = False)
-print(f"Wrote full_dedupe.csv ({merged.shape[0]} unique titles and merged.shape[1])")
+print(f"Wrote full_dedupe.csv ({merged.shape[0]} unique titles and {merged.shape[1]}) columns")
 
-#Printing raw rows, deduped rows, and rows removed in terminal
+# Run ~RapidFuzz~ matching on those titles. Build a mapping title -> canonical title
+titles = merged['product_title'].tolist()
+canonical = {}
+assigned = set()
+for t in titles:
+    if t in assigned:
+        continue
+    matches = process.extract(t, titles, scorer=fuzz.token_sort_ratio, score_cutoff=85)
+    group = [m[0] for m in matches]
+    canon = max(group, key=len)
+    for member in group:
+        canonical[member] = canon
+        assigned.add(member)
+
+# Remap into a new column
+merged['canonical_title'] = merged['product_title'].map(canonical)
+
+#Final dedupe on the fuzzy key
+final = (
+    merged
+    .groupby('canonical_title', as_index = False, sort = False)
+    .agg(agg_dict)
+)
+final.fillna('Unknown', inplace = True)
+
+#Export fuzzy deduped output
+final.to_csv('fuzzy_dedupe.csv', index = False)
+print("Wrote fuzzy_deduped.csv ({final.shape[0]} unique fuzzy titles)")
+
+# Summary
 print("\nSummary:")
-print(f"     Raw rows:    {full.shape[0]}")
-print(f"     Deduped rows:{merged.shape[0]}")
-print(f"     Removed rows:{full.shape[0] - merged.shape[0]}")
+print(f"     Raw rows:      {full.shape[0]}")
+print(f"     Pandas-deduped:{merged.shape[0]}")
+print(f"     Fuzzy-deduped: {full.shape[0]}")
+print(f"     Pandas Removed:{full.shape[0] - merged.shape[0]}")
+print(f"     Raw rows:      {full.shape[0] - full.shape[0]}")
 
 input("\nPress Enter to exit...")

@@ -84,7 +84,7 @@ Then, exported the deduped sample: merged.to_csv('dedupe_merged_sample.csv', ind
 
 Step 4. Recreated CSV files to analyze them with the updated code.
 Next is applying identical code to the full dataset(df[cols] instead of sample). I replaced sample with full.
-Even though I used 'first_non_null', there were still cell blanks. I used a placeholder like 'Unknown' to make no cell blank.
+Even though I used 'first_non_null', there were still cell blanks. I used a placeholder like "Unknown" to make no cell blank.
 Also added groupby(..., sort = False) to keep the rows in original order
 Reviewed pandas documentation for functions
 
@@ -98,13 +98,24 @@ Rows removed due to duplicates of 'product_title': 3009
 
 Step 6. Generelizing to the entire parquet file, taking the full DataFrame
 Coding aggregate to be dinamically and changing merged
-Again, filling every missing cell with 'Unknown'
+Again, filling every missing cell with "Unknown"
 
 Result:
 "full_raw.csv"          "full_dedupe.csv"
 rows: 21946             rows: 18955
 Removed rows: 2991
 
+Step 7. Installing RapidFuzz for catching punctuation or spelling differences between fields.
+From RapidFuzzy, I used 'process.extract' to cluster titles with >85% similarity
+Mapped every title to its canonical representative
+Grouped by 'canonical_title' and reaggregated with the same 'agg_dict'
+Filled remaining blanks with "Unknown"
+Now, final output is 'fuzzy_dedupe.csv'
+Printed raw rows, pandas deduped rows and fuzzy deduped rows for summary. Also, logged rows removed with pandas and rows removed with fuzzy.
 
+~~~Files Produce~~~
+'full_raw.csv' - original data
+'full_dedupe.csv' - pandas deduped data
+'fuzzy_dedupe.csv' - fuzzy deduped data
 
-
+Even though did these steps, 'fuzzy_dedupe.csv' produced more rows than 'full_raw.csv' file and it took 5 minutes to run.
