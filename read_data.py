@@ -1,4 +1,5 @@
 import pandas as pd
+import csv
 from rapidfuzz import process, fuzz
 
 # Configure pandas display
@@ -13,8 +14,18 @@ df = pd.read_parquet(file_path)
 # Work on a full copy of the DataFrame
 full = df.copy()
 
-# Export the raw full dataset
-full.to_csv('full_raw.csv', index = False)
+# Strip out any literal "\n" inside your cells
+full = full.replace({r"\n": " "}, regex = True)
+
+# Write full_raw.csv with every field quoted & a clean line terminator
+full.to_csv(
+    "full_raw.csv",
+    index = False,
+    quoting = csv.QUOTE_ALL,
+    lineterminator = "\n"
+)
+
+# Printing out the raw nr of rows and columns
 print(f"Wrote full_raw.csv ({full.shape[0]} rows, {full.shape[1]} columns)")
 
 # Define helper first_non_null(function) to pick the first non-null value in each group
@@ -29,7 +40,7 @@ agg_dict = {
     if col != 'product_title'
 }
 
-# Group by 'product_title' and apply first_non_null to every other field
+# Group by 'product_title' and apply first_non_null to every other field(pandas)
 merged = (
     full
     .groupby('product_title', as_index = False, sort = False)
@@ -47,11 +58,13 @@ print(f"Wrote full_dedupe.csv ({merged.shape[0]} unique titles and {merged.shape
 titles = merged['product_title'].tolist()
 canonical = {}
 assigned = set()
+
 for t in titles:
     if t in assigned:
         continue
     matches = process.extract(t, titles, scorer=fuzz.token_sort_ratio, score_cutoff=85)
     group = [m[0] for m in matches]
+    #choose the longest title as the canonical one
     canon = max(group, key=len)
     for member in group:
         canonical[member] = canon
@@ -70,14 +83,18 @@ final.fillna('Unknown', inplace = True)
 
 #Export fuzzy deduped output
 final.to_csv('fuzzy_dedupe.csv', index = False)
-print("Wrote fuzzy_deduped.csv ({final.shape[0]} unique fuzzy titles)")
+print(f"Wrote fuzzy_dedupe.csv ({final.shape[0]} unique fuzzy titles, {final.shape[1]} columns)")
 
 # Summary
+raw_count = full.shape[0]
+pandas_count = merged.shape[0]
+fuzzy_count = final.shape[0]
+
 print("\nSummary:")
-print(f"     Raw rows:      {full.shape[0]}")
-print(f"     Pandas-deduped:{merged.shape[0]}")
-print(f"     Fuzzy-deduped: {full.shape[0]}")
-print(f"     Pandas Removed:{full.shape[0] - merged.shape[0]}")
-print(f"     Raw rows:      {full.shape[0] - full.shape[0]}")
+print(f"     Raw rows:      {raw_count}")
+print(f"     Pandas-deduped:{pandas_count}")
+print(f"     Fuzzy-deduped: {fuzzy_count}")
+print(f"     Removed by Pandas: {raw_count - pandas_count}")
+print(f"     Removed by Fuzzy:  {pandas_count - fuzzy_count}")
 
 input("\nPress Enter to exit...")

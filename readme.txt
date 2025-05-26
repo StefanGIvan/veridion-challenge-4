@@ -118,4 +118,7 @@ Printed raw rows, pandas deduped rows and fuzzy deduped rows for summary. Also, 
 'full_dedupe.csv' - pandas deduped data
 'fuzzy_dedupe.csv' - fuzzy deduped data
 
-Even though did these steps, 'fuzzy_dedupe.csv' produced more rows than 'full_raw.csv' file and it took 5 minutes to run.
+Even though I did these steps, 'fuzzy_dedupe.csv' produced more rows than 'full_raw.csv' file and it took 7 minutes to run. One problem lies in characters, specifically new lines("\n") which might produce more rows.
+I stripped out embedded newlines and quouted every field, so commas/quotes don't break the csv.
+Finally, I reported both pandas dedude and fuzzy dedupe row counts.
+Different methods need to be implemmented for faster output in fuzzy.
